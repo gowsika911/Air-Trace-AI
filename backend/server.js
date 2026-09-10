@@ -6,7 +6,14 @@ const { classifySource } = require('./classifier');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(cors());
+// Comma-separated list of allowed frontend origins, e.g.
+// "https://airtrace-ai.vercel.app,http://localhost:5173"
+// Falls back to allowing all origins if not set (fine for dev/demo).
+const allowedOrigins = process.env.FRONTEND_URL
+  ? process.env.FRONTEND_URL.split(',').map((s) => s.trim())
+  : true;
+
+app.use(cors({ origin: allowedOrigins }));
 app.use(express.json());
 
 // Health check

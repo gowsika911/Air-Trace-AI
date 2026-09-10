@@ -1,4 +1,7 @@
-const BASE_URL = '/api';
+// In local dev, Vite's proxy (see vite.config.js) forwards /api to localhost:5000.
+// In production, there is no dev server/proxy, so we call the deployed backend
+// directly using a URL injected at build time via VITE_API_BASE_URL.
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 async function handleResponse(res) {
   if (!res.ok) {
