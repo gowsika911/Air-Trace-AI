@@ -11,6 +11,12 @@ async function handleResponse(res) {
   return res.json();
 }
 
+function authHeaders(token) {
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+// ---------- Public: zones & prediction ----------
+
 export async function fetchZones() {
   const res = await fetch(`${BASE_URL}/zones`);
   return handleResponse(res);
@@ -21,6 +27,76 @@ export async function predictSource(pollutants) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(pollutants),
+  });
+  return handleResponse(res);
+}
+
+// ---------- Public: chatbot & authorities ----------
+
+export async function askChatbot(message) {
+  const res = await fetch(`${BASE_URL}/chatbot`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message }),
+  });
+  return handleResponse(res);
+}
+
+export async function fetchAuthorities() {
+  const res = await fetch(`${BASE_URL}/authorities`);
+  return handleResponse(res);
+}
+
+// ---------- Auth ----------
+
+export async function login(email, password) {
+  const res = await fetch(`${BASE_URL}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+  return handleResponse(res);
+}
+
+export async function signup(name, email, password) {
+  const res = await fetch(`${BASE_URL}/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, email, password }),
+  });
+  return handleResponse(res);
+}
+
+export async function fetchMe(token) {
+  const res = await fetch(`${BASE_URL}/auth/me`, {
+    headers: authHeaders(token),
+  });
+  return handleResponse(res);
+}
+
+// ---------- Admin only ----------
+
+export async function updateZoneAdmin(token, zoneId, fields) {
+  const res = await fetch(`${BASE_URL}/admin/zones/${zoneId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...authHeaders(token) },
+    body: JSON.stringify(fields),
+  });
+  return handleResponse(res);
+}
+
+export async function sendAuthorityMessage(token, { authority, subject, body }) {
+  const res = await fetch(`${BASE_URL}/admin/messages`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders(token) },
+    body: JSON.stringify({ authority, subject, body }),
+  });
+  return handleResponse(res);
+}
+
+export async function fetchSentMessages(token) {
+  const res = await fetch(`${BASE_URL}/admin/messages`, {
+    headers: authHeaders(token),
   });
   return handleResponse(res);
 }

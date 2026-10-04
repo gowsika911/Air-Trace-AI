@@ -1,7 +1,7 @@
 {
   "name": "airtrace-ai-backend",
-  "version": "1.0.0",
-  "description": "AirTrace AI - pollution source attribution API",
+  "version": "1.1.0",
+  "description": "AirTrace AI - pollution source attribution API with auth, admin, and chatbot",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
@@ -9,8 +9,10 @@
     "dev": "nodemon server.js"
   },
   "dependencies": {
+    "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
-    "express": "^4.19.2"
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2"
   },
   "devDependencies": {
     "nodemon": "^3.1.4"

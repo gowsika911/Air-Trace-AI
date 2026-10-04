@@ -3,8 +3,15 @@ import { Routes, Route } from 'react-router-dom';
 import Header from './components/Header.jsx';
 import NavTabs from './components/NavTabs.jsx';
 import Toast from './components/Toast.jsx';
+import ProtectedRoute from './components/ProtectedRoute.jsx';
 import DashboardPage from './pages/DashboardPage.jsx';
 import AnalysisPage from './pages/AnalysisPage.jsx';
+import LoginPage from './pages/LoginPage.jsx';
+import SignupPage from './pages/SignupPage.jsx';
+import ChatbotPage from './pages/ChatbotPage.jsx';
+import ReducePollutionPage from './pages/ReducePollutionPage.jsx';
+import AuthoritiesPage from './pages/AuthoritiesPage.jsx';
+import AdminPage from './pages/AdminPage.jsx';
 import { fetchZones, predictSource } from './api.js';
 
 const DEFAULT_INPUTS = { pm25: 128, pm10: 201, no2: 86, co: 2.1 };
@@ -105,6 +112,19 @@ export default function App() {
               activeZone={activeZone}
               prediction={prediction}
             />
+          }
+        />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignupPage />} />
+        <Route path="/chatbot" element={<ChatbotPage />} />
+        <Route path="/reduce-pollution" element={<ReducePollutionPage />} />
+        <Route path="/authorities" element={<AuthoritiesPage />} />
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute adminOnly>
+              <AdminPage />
+            </ProtectedRoute>
           }
         />
       </Routes>
