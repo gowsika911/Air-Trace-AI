@@ -66,8 +66,25 @@ export default function TrendChart({ zoneName = 'Selected zone', points = [], aq
       {hasData ? (
         <>
           <div style={{ display: 'flex', marginTop: 14 }}>
-            {/* Y axis */}
-            <div style={{ position: 'relative', width: 34, height: 164, flexShrink: 0 }}>
+            {/* Y axis title (rotated) */}
+            <div
+              style={{
+                width: 16, height: 164, flexShrink: 0, display: 'flex',
+                alignItems: 'center', justifyContent: 'center',
+              }}
+            >
+              <span
+                style={{
+                  writingMode: 'vertical-rl', transform: 'rotate(180deg)',
+                  fontSize: 10, color: '#9bb8be', whiteSpace: 'nowrap', letterSpacing: 0.3,
+                }}
+              >
+                PM2.5 (µg/m³)
+              </span>
+            </div>
+
+            {/* Y axis ticks */}
+            <div style={{ position: 'relative', width: 30, height: 164, flexShrink: 0 }}>
               {yTicks.map((tick) => (
                 <span
                   key={tick.value}
@@ -98,7 +115,7 @@ export default function TrendChart({ zoneName = 'Selected zone', points = [], aq
           </div>
 
           {/* X axis */}
-          <div className="axis" style={{ marginLeft: 34 }}>
+          <div className="axis" style={{ marginLeft: 46 }}>
             {HOUR_LABELS.map((label) => (
               <span key={label}>{label}</span>
             ))}
