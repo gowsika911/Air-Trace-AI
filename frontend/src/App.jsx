@@ -14,10 +14,12 @@ import AuthoritiesPage from './pages/AuthoritiesPage.jsx';
 import AdminPage from './pages/AdminPage.jsx';
 import DataFieldsPage from './pages/DataFieldsPage.jsx';
 import { fetchZones, predictSource } from './api.js';
+import { useAuth } from './context/AuthContext.jsx';
 
 const DEFAULT_INPUTS = { pm25: 128, pm10: 201, no2: 86, co: 2.1 };
 
 export default function App() {
+  const { isAuthenticated } = useAuth();
   const [zones, setZones] = useState([]);
   const [activeZone, setActiveZone] = useState(null);
   const [prediction, setPrediction] = useState(null);
@@ -85,41 +87,66 @@ export default function App() {
   return (
     <main className="app">
       <Header />
-      <NavTabs />
+      {isAuthenticated && <NavTabs />}
 
       <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignupPage />} />
         <Route
           path="/"
           element={
-            <DashboardPage
-              zones={zones}
-              activeZone={activeZone}
-              prediction={prediction}
-              loadingZones={loadingZones}
-              error={error}
-              onSelectZone={handleSelectZone}
-              predicting={predicting}
-            />
+            <ProtectedRoute>
+              <DashboardPage
+                zones={zones}
+                activeZone={activeZone}
+                prediction={prediction}
+                loadingZones={loadingZones}
+                error={error}
+                onSelectZone={handleSelectZone}
+                predicting={predicting}
+              />
+            </ProtectedRoute>
           }
         />
         <Route
           path="/analysis"
           element={
-            <AnalysisPage
-              inputs={inputs}
-              onChange={handleInputChange}
-              onSubmit={handlePredict}
-              predicting={predicting}
-              activeZone={activeZone}
-              prediction={prediction}
-            />
+            <ProtectedRoute>
+              <AnalysisPage
+                inputs={inputs}
+                onChange={handleInputChange}
+                onSubmit={handlePredict}
+                predicting={predicting}
+                activeZone={activeZone}
+                prediction={prediction}
+              />
+            </ProtectedRoute>
           }
         />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/signup" element={<SignupPage />} />
-        <Route path="/chatbot" element={<ChatbotPage />} />
-        <Route path="/reduce-pollution" element={<ReducePollutionPage />} />
-        <Route path="/authorities" element={<AuthoritiesPage />} />
+        <Route
+          path="/chatbot"
+          element={
+            <ProtectedRoute>
+              <ChatbotPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/reduce-pollution"
+          element={
+            <ProtectedRoute>
+              <ReducePollutionPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/authorities"
+          element={
+            <ProtectedRoute>
+              <AuthoritiesPage />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/admin"
           element={
