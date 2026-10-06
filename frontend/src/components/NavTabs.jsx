@@ -19,6 +19,7 @@ export default function NavTabs() {
       <NavLink to="/reduce-pollution" className={linkClass}>Reduce Pollution</NavLink>
       <NavLink to="/authorities" className={linkClass}>Authorities</NavLink>
       {isAdmin && <NavLink to="/admin" className={linkClass}>Admin</NavLink>}
+      {isAdmin && <NavLink to="/admin/data-fields" className={linkClass}>Data Fields</NavLink>}
 
       <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
         {isAuthenticated ? (

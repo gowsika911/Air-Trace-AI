@@ -15,6 +15,7 @@ let nextId = 1;
 function seed() {
   const seedUsers = [
     { name: 'Admin', email: 'admin@airtrace.ai', password: 'Admin@123', role: 'admin' },
+    { name: 'Admin', email: 'admin123@gmail.com', password: 'Admin@123', role: 'admin' },
     { name: 'Demo Citizen', email: 'user@airtrace.ai', password: 'User@123', role: 'user' },
   ];
 

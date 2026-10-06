@@ -12,6 +12,7 @@ import ChatbotPage from './pages/ChatbotPage.jsx';
 import ReducePollutionPage from './pages/ReducePollutionPage.jsx';
 import AuthoritiesPage from './pages/AuthoritiesPage.jsx';
 import AdminPage from './pages/AdminPage.jsx';
+import DataFieldsPage from './pages/DataFieldsPage.jsx';
 import { fetchZones, predictSource } from './api.js';
 
 const DEFAULT_INPUTS = { pm25: 128, pm10: 201, no2: 86, co: 2.1 };
@@ -124,6 +125,14 @@ export default function App() {
           element={
             <ProtectedRoute adminOnly>
               <AdminPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/data-fields"
+          element={
+            <ProtectedRoute adminOnly>
+              <DataFieldsPage />
             </ProtectedRoute>
           }
         />
