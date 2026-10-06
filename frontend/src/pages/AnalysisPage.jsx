@@ -1,9 +1,12 @@
 import Headline from '../components/Headline.jsx';
 import PollutantForm from '../components/PollutantForm.jsx';
+import PollutantLevels from '../components/PollutantLevels.jsx';
 import TrendChart from '../components/TrendChart.jsx';
 import CausePanel from '../components/CausePanel.jsx';
+import { useAuth } from '../context/AuthContext.jsx';
 
 export default function AnalysisPage({ inputs, onChange, onSubmit, predicting, activeZone, prediction }) {
+  const { isAdmin } = useAuth();
   const zoneName = activeZone ? activeZone.name : 'Custom profile';
 
   return (
@@ -11,10 +14,18 @@ export default function AnalysisPage({ inputs, onChange, onSubmit, predicting, a
       <Headline
         eyebrow="Deep dive"
         title="Analyze pollutant patterns"
-        subtitle="Simulate a pollutant profile and inspect the 12-hour trend behind a prediction"
+        subtitle={
+          isAdmin
+            ? 'Simulate a pollutant profile and inspect the 12-hour trend behind a prediction'
+            : 'View the pollution trend and source prediction for the selected zone'
+        }
       />
       <section className="lower">
-        <PollutantForm values={inputs} onChange={onChange} onSubmit={onSubmit} submitting={predicting} />
+        {isAdmin ? (
+          <PollutantForm values={inputs} onChange={onChange} onSubmit={onSubmit} submitting={predicting} />
+        ) : (
+          <PollutantLevels zone={activeZone} />
+        )}
         <TrendChart
           zoneName={zoneName}
           points={prediction?.trend || []}

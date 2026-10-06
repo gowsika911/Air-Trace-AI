@@ -14,8 +14,8 @@ const FIELD_GROUPS = [
   { title: 'Weather', fields: ['temperature', 'humidity', 'windSpeed'] },
 ];
 
-function ZoneEditor({ zone, token, onSaved }) {
-  const [form, setForm] = useState({
+function zoneToForm(zone) {
+  return {
     pm25: zone.pollutants.pm25,
     pm10: zone.pollutants.pm10,
     no2: zone.pollutants.no2,
@@ -26,9 +26,28 @@ function ZoneEditor({ zone, token, onSaved }) {
     windSpeed: zone.weather.windSpeed,
     station: zone.station,
     location: zone.location,
-  });
+  };
+}
+
+/**
+ * Single reusable 12-field form. Admin picks a city from the dropdown,
+ * the form fills with that city's current values, edits, clicks Save,
+ * then picks the next city and repeats — one form, not one per zone.
+ */
+function ZoneDataEditor({ zones, token, onSaved }) {
+  const [selectedId, setSelectedId] = useState(zones[0]?.id || '');
+  const [form, setForm] = useState(zones[0] ? zoneToForm(zones[0]) : {});
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  const selectedZone = zones.find((z) => z.id === selectedId);
+
+  const handleCityChange = (id) => {
+    setSelectedId(id);
+    const zone = zones.find((z) => z.id === id);
+    if (zone) setForm(zoneToForm(zone));
+    setSaved(false);
+  };
 
   const update = (key, value) => setForm((f) => ({ ...f, [key]: value }));
 
@@ -36,7 +55,7 @@ function ZoneEditor({ zone, token, onSaved }) {
     setSaving(true);
     setSaved(false);
     try {
-      const updated = await updateZoneAdmin(token, zone.id, form);
+      const updated = await updateZoneAdmin(token, selectedId, form);
       onSaved(updated);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -47,40 +66,59 @@ function ZoneEditor({ zone, token, onSaved }) {
 
   return (
     <div className="card panel" style={{ minHeight: 'auto' }}>
-      <div className="cardtitle">{zone.name}</div>
-      <div className="inputs" style={{ marginTop: 10 }}>
-        <div className="input">
-          <label>Station</label>
-          <input value={form.station} onChange={(e) => update('station', e.target.value)} />
-        </div>
-        <div className="input">
-          <label>Location</label>
-          <input value={form.location} onChange={(e) => update('location', e.target.value)} />
-        </div>
+      <div className="cardhead">
+        <div className="cardtitle">Edit zone data</div>
+        <select
+          className="select"
+          value={selectedId}
+          onChange={(e) => handleCityChange(e.target.value)}
+        >
+          {zones.map((z) => (
+            <option key={z.id} value={z.id}>{z.name}</option>
+          ))}
+        </select>
       </div>
 
-      {FIELD_GROUPS.map((group) => (
-        <div key={group.title}>
-          <p className="sub" style={{ marginTop: 12, marginBottom: 4 }}>{group.title}</p>
-          <div className="inputs">
-            {group.fields.map((f) => (
-              <div className="input" key={f}>
-                <label>{f}</label>
-                <input
-                  type="number"
-                  step="0.1"
-                  value={form[f]}
-                  onChange={(e) => update(f, e.target.value)}
-                />
-              </div>
-            ))}
+      {selectedZone && (
+        <>
+          <div className="inputs" style={{ marginTop: 14 }}>
+            <div className="input">
+              <label>Station</label>
+              <input value={form.station} onChange={(e) => update('station', e.target.value)} />
+            </div>
+            <div className="input">
+              <label>Location</label>
+              <input value={form.location} onChange={(e) => update('location', e.target.value)} />
+            </div>
           </div>
-        </div>
-      ))}
 
-      <button className="predict" style={{ marginTop: 12 }} onClick={handleSave} disabled={saving}>
-        {saving ? 'Saving…' : saved ? 'Saved ✓' : 'Save changes'}
-      </button>
+          {FIELD_GROUPS.map((group) => (
+            <div key={group.title}>
+              <p className="sub" style={{ marginTop: 14, marginBottom: 4 }}>{group.title}</p>
+              <div className="inputs">
+                {group.fields.map((f) => (
+                  <div className="input" key={f}>
+                    <label>{f}</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={form[f]}
+                      onChange={(e) => update(f, e.target.value)}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+
+          <button className="predict" style={{ marginTop: 14 }} onClick={handleSave} disabled={saving}>
+            {saving ? 'Saving…' : saved ? `Saved — ${selectedZone.name} ✓` : `Save changes for ${selectedZone.name}`}
+          </button>
+          <p className="sub" style={{ marginTop: 8, fontSize: 11 }}>
+            Pick another city from the dropdown above to edit it next.
+          </p>
+        </>
+      )}
     </div>
   );
 }
@@ -203,14 +241,10 @@ export default function AdminPage() {
       {loading ? (
         <p className="sub">Loading zones…</p>
       ) : (
-        <>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
-            {zones.map((zone) => (
-              <ZoneEditor key={zone.id} zone={zone} token={token} onSaved={handleZoneSaved} />
-            ))}
-          </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <ZoneDataEditor zones={zones} token={token} onSaved={handleZoneSaved} />
           <AuthorityMessenger token={token} />
-        </>
+        </div>
       )}
     </>
   );
