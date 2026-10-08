@@ -92,12 +92,17 @@ app.post('/api/predict', (req, res) => {
 
 // ---------- Public: chatbot ----------
 
-app.post('/api/chatbot', (req, res) => {
+app.post('/api/chatbot', async (req, res) => {
   const { message } = req.body;
   if (!message || typeof message !== 'string') {
     return res.status(400).json({ error: 'message is required.' });
   }
-  res.json({ reply: getChatbotReply(message) });
+  try {
+    const reply = await getChatbotReply(message);
+    res.json({ reply });
+  } catch (err) {
+    res.status(500).json({ error: 'Chatbot failed to respond.' });
+  }
 });
 
 // ---------- Public: authorities directory ----------
