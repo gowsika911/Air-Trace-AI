@@ -100,3 +100,33 @@ export async function fetchSentMessages(token) {
   });
   return handleResponse(res);
 }
+
+// ---------- Saved chat history (login required) ----------
+
+export async function listConversations(token) {
+  const res = await fetch(`${BASE_URL}/chat/conversations`, { headers: authHeaders(token) });
+  return handleResponse(res);
+}
+
+export async function getConversation(token, id) {
+  const res = await fetch(`${BASE_URL}/chat/conversations/${id}`, { headers: authHeaders(token) });
+  return handleResponse(res);
+}
+
+export async function deleteConversation(token, id) {
+  const res = await fetch(`${BASE_URL}/chat/conversations/${id}`, {
+    method: 'DELETE',
+    headers: authHeaders(token),
+  });
+  return handleResponse(res);
+}
+
+// conversationId = null starts a new chat.
+export async function sendChatMessage(token, { conversationId, message }) {
+  const res = await fetch(`${BASE_URL}/chat/message`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders(token) },
+    body: JSON.stringify({ conversationId, message }),
+  });
+  return handleResponse(res);
+}

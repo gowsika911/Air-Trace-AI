@@ -21,12 +21,13 @@ const REQUEST_TIMEOUT_MS = 8000;
 const SYSTEM_PROMPT = `You are the AirTrace AI assistant for a pollution-monitoring dashboard covering four zones of Coimbatore, India: Gandhipuram, Saravanampatti, Singanallur and RS Puram.
 
 Rules:
-- For any question about a specific zone, or about which zone or source is worst, answer ONLY from the live monitoring data provided below. Use its AQI, category, likely source, pollutant levels and suggested action. Never add roads, landmarks, industries, or numbers that are not in that data. Describe the likely source as the app's estimate.
+- For any question about a specific zone, or about which zone or source is worst, answer ONLY from the live monitoring data provided below. Use its AQI, category, likely source, pollutant levels and suggested action. Never add roads, landmarks, industries, or numbers that are not in that data. The pollution source is the app's estimate: state it directly and call it an estimate. Never say source information is missing when it appears in the data.
 - Match small spelling mistakes in zone names to the nearest zone.
 - If the user asks about a place that is not one of the four zones, say you only monitor these four zones and offer to share their data.
 - This app uses India's CPCB AQI categories: Good 0-50, Satisfactory 51-100, Moderate 101-200, Poor 201-300, Very Poor 301-400, Severe 401-500. Never use US EPA categories.
 - For general questions (health precautions, reducing pollution, what PM2.5 means), give practical advice.
-- Be concise: 2-4 sentences, plain text, no markdown headers or tables.`;
+- Format every answer as: one short intro line, then 3-5 bullet points (each on its own line, starting with "- ", each one short), and optionally a last line starting with "Tip:". Use **bold** only for key labels (zone name, AQI, source). No markdown headers, no tables, no long paragraphs.
+- For a question about a specific zone, use these bullets: **AQI** (value and category), **Estimated main source**, **Key pollutants**, **What to do**.`;
 
 function buildSystemPrompt(contextText) {
   if (!contextText) return SYSTEM_PROMPT;
@@ -66,7 +67,7 @@ async function discoverGroqModel(apiKey) {
 }
 
 /** Groq (OpenAI-compatible chat completions). Returns text or null. */
-async function askGroq(message, contextText = '') {
+async function askGroq(message, contextText = '', history = []) {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) return null;
 
@@ -80,6 +81,7 @@ async function askGroq(message, contextText = '') {
     model: groqModel,
     messages: [
       { role: 'system', content: buildSystemPrompt(contextText) },
+      ...history,
       { role: 'user', content: message },
     ],
     temperature: 0.4,
@@ -117,7 +119,17 @@ async function askGroq(message, contextText = '') {
 }
 
 /** Google Gemini (generateContent). Returns text or null. */
-async function askGemini(message, contextText = '') {
+/** Maps {role:'user'|'assistant', content} history to Gemini's format (must start with a user turn). */
+function toGeminiHistory(history) {
+  const mapped = history.map((h) => ({
+    role: h.role === 'assistant' ? 'model' : 'user',
+    parts: [{ text: h.content }],
+  }));
+  while (mapped.length > 0 && mapped[0].role === 'model') mapped.shift();
+  return mapped;
+}
+
+async function askGemini(message, contextText = '', history = []) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return null;
 
@@ -129,7 +141,7 @@ async function askGemini(message, contextText = '') {
         headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: buildSystemPrompt(contextText) }] },
-          contents: [{ role: 'user', parts: [{ text: message }] }],
+          contents: [...toGeminiHistory(history), { role: 'user', parts: [{ text: message }] }],
           // 2.5 models count internal "thinking" tokens toward this limit.
           generationConfig: { maxOutputTokens: 1024, temperature: 0.4 },
         }),
@@ -158,61 +170,62 @@ async function askGemini(message, contextText = '') {
 const RULES = [
   {
     keywords: ['hi', 'hello', 'hey'],
-    reply: "Hi! I'm the AirTrace AI assistant. Ask me about AQI, pollution sources, or how to reduce pollution.",
+    reply:
+      "Hi! I'm the AirTrace AI assistant. You can ask me about:\n- **Zone data** - e.g. \"pollution source in Gandhipuram\"\n- **AQI** and what it means\n- **Health precautions** on polluted days\n- **How to reduce pollution**",
   },
   {
     keywords: ['traffic'],
     reply:
-      'Traffic pollution mainly comes from vehicle exhaust (NO2, CO). You can help by carpooling, using public transport, maintaining your vehicle, and avoiding unnecessary idling.',
+      'Traffic pollution mainly comes from vehicle exhaust (NO2, CO). What helps:\n- Use public transport or carpool\n- Keep your vehicle serviced\n- Avoid idling at signals\n- Choose cycling or walking for short trips',
   },
   {
     keywords: ['construction', 'dust'],
     reply:
-      'Construction dust raises PM10 levels. Sites should use water spraying, cover material piles, and use dust barriers. Avoid outdoor exercise near active construction.',
+      'Construction dust raises PM10 levels. What helps:\n- Sites should spray water to settle dust\n- Cover sand and debris piles\n- Use dust barriers around the site\n- Avoid outdoor exercise near active construction',
   },
   {
     keywords: ['industry', 'industrial', 'factory'],
     reply:
-      'Industrial emissions are regulated by TNPCB. If you notice unusual smoke or odor from a facility, you can report it via the Authorities page.',
+      'Industrial emissions are regulated by TNPCB. What you can do:\n- Report unusual smoke or odor from a facility\n- Use the **Authorities** page for contact details\n- Industries should run regular stack emission checks',
   },
   {
     keywords: ['burning', 'burn', 'fire'],
     reply:
-      'Open burning of waste/leaves releases harmful particulates and gases. It is illegal in most urban areas — report it instead of tolerating it.',
+      'Open burning of waste or leaves releases harmful particles and gases. What to do:\n- Never burn leaves, plastic, or household waste\n- Use municipal waste collection instead\n- Report open burning to the local authorities',
   },
   {
     keywords: ['reduce', 'prevent', 'tips', 'help', 'improve'],
     reply:
-      'A few ways to reduce pollution exposure and impact: use public transport, avoid outdoor activity during high-AQI hours, support dust control at construction sites, avoid open burning, and plant/support urban greenery.',
+      'Ways to reduce pollution and your exposure:\n- Use public transport instead of private vehicles\n- Avoid outdoor activity during high-AQI hours\n- Support dust control at construction sites\n- Avoid open burning\n- Plant and protect urban greenery',
   },
   {
     keywords: ['aqi', 'air quality index'],
     reply:
-      'AQI (Air Quality Index) summarizes how polluted the air currently is. Below 100 is generally safe, 101-200 is moderate (sensitive groups should be cautious), and above 300 is severe — avoid outdoor activity.',
+      'AQI (Air Quality Index) shows how polluted the air is. India (CPCB) categories:\n- **0-50** Good\n- **51-100** Satisfactory\n- **101-200** Moderate\n- **201-300** Poor\n- **301-400** Very Poor\n- **401-500** Severe',
   },
   {
     keywords: ['mask', 'protect', 'health'],
     reply:
-      'On high-AQI days: wear an N95 mask outdoors, keep windows closed, use an air purifier indoors if possible, and avoid strenuous outdoor exercise.',
+      'On high-AQI days:\n- Wear an N95 mask outdoors\n- Keep windows closed\n- Use an air purifier indoors if possible\n- Avoid strenuous outdoor exercise\n- Keep children and elderly people indoors',
   },
   {
     keywords: ['pm2.5', 'pm25', 'pm10', 'particulate'],
     reply:
-      'PM2.5 and PM10 are fine particulate matter that can enter your lungs and bloodstream. Main sources here are traffic, construction dust, and industrial activity.',
+      'PM2.5 and PM10 are fine particles that can enter your lungs and bloodstream.\n- **PM2.5** - very fine particles (vehicle and industrial smoke)\n- **PM10** - coarser particles (road and construction dust)\n- Main local sources: traffic, construction dust, industrial activity',
   },
   {
     keywords: ['contact', 'authority', 'authorities', 'report'],
     reply:
-      'You can find contact details for TNPCB, the City Corporation, Traffic Police, and the Health Department on the Authorities page.',
+      'Contact details are on the **Authorities** page:\n- TNPCB (pollution control)\n- City Corporation\n- Traffic Police\n- District Health Department',
   },
   {
     keywords: ['thank', 'thanks'],
-    reply: "You're welcome! Stay safe and check the Dashboard for live zone-level pollution data.",
+    reply: "You're welcome! Stay safe, and check the **Dashboard** for live zone-level pollution data.",
   },
 ];
 
 const FALLBACK_REPLY =
-  "I can help with questions about pollution sources, AQI, health precautions, or how to reduce pollution. Try asking something like 'how to reduce traffic pollution' or 'what does high PM2.5 mean'.";
+  "I can help with:\n- **Zone data** - e.g. \"pollution source in Singanallur\"\n- **AQI** and what it means\n- **Health precautions** on polluted days\n- **How to reduce pollution** - e.g. \"how to reduce traffic pollution\"";
 
 /** Lowercase, strip punctuation, collapse spaces. */
 function normalize(str) {
@@ -265,13 +278,25 @@ function findMentionedZones(message, zones) {
 function zoneSummary(zone) {
   const p = zone.prediction || {};
   const c = zone.pollutants || {};
-  return `${zone.name}: AQI ${p.aqi} (${p.aqiStatus}); likely source: ${p.source} (${p.confidence}% confidence); PM2.5 ${c.pm25}, PM10 ${c.pm10}, NO2 ${c.no2}, SO2 ${c.so2}, CO ${c.co}; suggested action: ${p.action}`;
+  return `${zone.name}: AQI ${p.aqi} (${p.aqiStatus}); estimated main pollution source: ${p.source} (${p.confidence}% confidence); PM2.5 ${c.pm25}, PM10 ${c.pm10}, NO2 ${c.no2}, SO2 ${c.so2}, CO ${c.co}; suggested action: ${p.action}`;
 }
 
 function zoneReply(zone) {
   const p = zone.prediction || {};
   const c = zone.pollutants || {};
-  return `${zone.name} right now: AQI ${p.aqi} (${p.aqiStatus}). The likely main source is ${p.source} (${p.confidence}% confidence). PM2.5 is ${c.pm25} \u00b5g/m\u00b3, PM10 ${c.pm10} \u00b5g/m\u00b3, NO2 ${c.no2} \u00b5g/m\u00b3. Suggested action: ${p.action}`;
+  return [
+    `**${zone.name}** right now:`,
+    `- **AQI:** ${p.aqi} (${p.aqiStatus})`,
+    `- **Estimated main source:** ${p.source} (${p.confidence}% confidence)`,
+    `- **Key pollutants:** PM2.5 ${c.pm25}, PM10 ${c.pm10}, NO2 ${c.no2} \u00b5g/m\u00b3`,
+    `- **What to do:** ${p.action}`,
+  ].join('\n');
+}
+
+/** Whole-word keyword test (so "hi" does not match inside "which"). Allows a plural "s". */
+function hasKeyword(text, keyword) {
+  const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`\\b${escaped}s?\\b`).test(text);
 }
 
 function getRuleBasedReply(message, zones = []) {
@@ -280,11 +305,11 @@ function getRuleBasedReply(message, zones = []) {
   // If the user names a monitored zone, answer from live zone data.
   const mentioned = findMentionedZones(message, zones);
   if (mentioned.length > 0) {
-    return mentioned.map(zoneReply).join(' ');
+    return mentioned.map(zoneReply).join('\n\n');
   }
 
   for (const rule of RULES) {
-    if (rule.keywords.some((kw) => text.includes(kw))) {
+    if (rule.keywords.some((kw) => hasKeyword(text, kw))) {
       return rule.reply;
     }
   }
@@ -292,8 +317,21 @@ function getRuleBasedReply(message, zones = []) {
   return FALLBACK_REPLY;
 }
 
+/** Readable fact sheet for one zone, attached directly to the user's question. */
+function zoneFacts(zone) {
+  const p = zone.prediction || {};
+  const c = zone.pollutants || {};
+  return [
+    `${zone.name}`,
+    `- AQI: ${p.aqi} (${p.aqiStatus})`,
+    `- Estimated main pollution source: ${p.source} (${p.confidence}% confidence)`,
+    `- PM2.5: ${c.pm25}, PM10: ${c.pm10}, NO2: ${c.no2}, SO2: ${c.so2}, CO: ${c.co}`,
+    `- Suggested action: ${p.action}`,
+  ].join('\n');
+}
+
 /** Live data block for the LLMs: ranking, the zone the user asked about, then every zone. */
-function buildContext(message, zones) {
+function buildContext(zones, mentioned = []) {
   if (!zones.length) return '';
 
   const ranked = [...zones].sort((x, y) => (y.prediction?.aqi ?? 0) - (x.prediction?.aqi ?? 0));
@@ -301,7 +339,6 @@ function buildContext(message, zones) {
     `Zones ranked worst to best by AQI: ${ranked.map((z) => `${z.name} (${z.prediction?.aqi}, ${z.prediction?.aqiStatus})`).join(', ')}.`,
   ];
 
-  const mentioned = findMentionedZones(message, zones);
   if (mentioned.length > 0) {
     lines.push(`The user is asking about: ${mentioned.map((z) => z.name).join(', ')}.`);
   }
@@ -310,18 +347,41 @@ function buildContext(message, zones) {
   return lines.join('\n');
 }
 
-/** Tries Groq, then Gemini, then rule-based matching. */
-async function getChatbotReply(message, zones = []) {
+/** For follow-ups like "what should I do?", find the zone from the last few user messages. */
+function findZonesFromHistory(history, zones) {
+  const recentUserMessages = history.filter((h) => h.role === 'user').slice(-3).reverse();
+  for (const h of recentUserMessages) {
+    const found = findMentionedZones(h.content, zones);
+    if (found.length > 0) return found;
+  }
+  return [];
+}
+
+/**
+ * Tries Groq, then Gemini, then rule-based matching.
+ * history = earlier turns of this chat: [{ role: 'user' | 'assistant', content }]
+ */
+async function getChatbotReply(message, zones = [], history = []) {
   if (!process.env.GROQ_API_KEY && !process.env.GEMINI_API_KEY) {
     console.warn('[chatbot] No GROQ_API_KEY or GEMINI_API_KEY set - using rule-based replies.');
   }
 
-  const context = buildContext(message, zones);
+  const mentioned = findMentionedZones(message, zones);
+  const carriedOver = mentioned.length === 0 ? findZonesFromHistory(history, zones) : [];
+  const context = buildContext(zones, mentioned);
 
-  const groqReply = await askGroq(message, context);
+  // Small models follow facts placed next to the question better than facts buried in the system prompt.
+  let llmMessage = message;
+  if (mentioned.length > 0) {
+    llmMessage = `${message}\n\nFacts from the live monitoring data (answer using these):\n${mentioned.map(zoneFacts).join('\n\n')}`;
+  } else if (carriedOver.length > 0) {
+    llmMessage = `${message}\n\nEarlier in this chat the user asked about ${carriedOver.map((z) => z.name).join(', ')}. Use these facts only if the new question is about that zone:\n${carriedOver.map(zoneFacts).join('\n\n')}`;
+  }
+
+  const groqReply = await askGroq(llmMessage, context, history);
   if (groqReply) return groqReply;
 
-  const geminiReply = await askGemini(message, context);
+  const geminiReply = await askGemini(llmMessage, context, history);
   if (geminiReply) return geminiReply;
 
   return getRuleBasedReply(message, zones);

@@ -11,6 +11,8 @@ const { classifySource } = require('./classifier');
 const { getChatbotReply } = require('./chatbot');
 const { signToken, comparePassword } = require('./utils/auth');
 const { authenticate, requireAdmin } = require('./middleware/auth');
+const Conversation = require('./models/Conversation');
+const createChatRouter = require('./routes/chat');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -98,12 +100,30 @@ app.post('/api/chatbot', async (req, res) => {
     return res.status(400).json({ error: 'message is required.' });
   }
   try {
-    const reply = await getChatbotReply(message);
+    let zones = [];
+    try {
+      zones = (await getAllZones()).map(enrichZone);
+    } catch (err) {
+      zones = []; // chatbot still answers without live data
+    }
+    const reply = await getChatbotReply(message, zones);
     res.json({ reply });
   } catch (err) {
     res.status(500).json({ error: 'Chatbot failed to respond.' });
   }
 });
+
+// ---------- Logged-in: saved chat history ----------
+
+app.use(
+  '/api/chat',
+  createChatRouter({
+    Conversation,
+    loadZones: async () => (await getAllZones()).map(enrichZone),
+    getChatbotReply,
+    authenticate,
+  })
+);
 
 // ---------- Public: authorities directory ----------
 
