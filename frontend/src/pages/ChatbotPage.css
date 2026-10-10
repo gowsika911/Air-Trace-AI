@@ -105,3 +105,19 @@
 @media (hover: none) {
   .chat-item-del { opacity: 1; }
 }
+
+/* ---------- dark scrollbars (match the theme) ---------- */
+.chat-messages,
+.chat-history {
+  color-scheme: dark;
+  scrollbar-width: thin;
+  scrollbar-color: #2b6662 transparent;
+}
+.chat-messages::-webkit-scrollbar,
+.chat-history::-webkit-scrollbar { width: 8px; }
+.chat-messages::-webkit-scrollbar-track,
+.chat-history::-webkit-scrollbar-track { background: transparent; }
+.chat-messages::-webkit-scrollbar-thumb,
+.chat-history::-webkit-scrollbar-thumb { background: #2b6662; border-radius: 8px; }
+.chat-messages::-webkit-scrollbar-thumb:hover,
+.chat-history::-webkit-scrollbar-thumb:hover { background: #3a8a84; }

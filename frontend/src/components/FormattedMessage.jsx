@@ -46,7 +46,15 @@ export default function FormattedMessage({ text }) {
         bullets.push(bullet[1]);
       } else {
         flushBullets();
-        if (line) {
+        const tip = line.match(/^(tip|note)\s*:\s*(.*)$/i);
+        if (tip) {
+          const label = tip[1][0].toUpperCase() + tip[1].slice(1).toLowerCase();
+          blocks.push(
+            <p key={`tip-${blocks.length}`} style={{ margin: '8px 0 0' }}>
+              <strong style={{ color: 'var(--amber)', fontWeight: 700 }}>{label}:</strong> {renderInline(tip[2])}
+            </p>
+          );
+        } else if (line) {
           blocks.push(
             <p key={`p-${blocks.length}`} style={{ margin: '0 0 4px' }}>
               {renderInline(line)}

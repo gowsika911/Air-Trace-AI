@@ -22,7 +22,7 @@ const SOURCE_PROFILES = {
     action: 'Deploy traffic police at peak junctions and activate signal-timing plan for the next 2 hours.',
   },
   'Industrial activity': {
-    detail: 'Elevated PM2.5 with steady baseline suggests nearby industrial emissions.',
+    detail: 'Elevated PM2.5 and SO2 suggest nearby industrial or combustion emissions.',
     action: 'Inspect nearby industrial stacks and verify emission-control equipment.',
   },
   'Construction dust': {
@@ -81,13 +81,18 @@ function buildTrend(baseline) {
   return points;
 }
 
-function classifySource({ pm25, pm10, no2, co }) {
+// SO2 above this level (ug/m3) is treated as a sign of industrial / combustion emissions.
+const SO2_BACKGROUND = 10;
+const SO2_WEIGHT = 3;
+
+function classifySource({ pm25, pm10, no2, co, so2 = 0 }) {
   const ratio = pm25 > 0 ? pm10 / pm25 : 0;
+  const so2Excess = Math.max(0, so2 - SO2_BACKGROUND);
 
   const scores = {
     'Traffic emissions': no2 * 0.6 + co * 25,
     'Construction dust': clamp(ratio - 1, 0, 3) * 60,
-    'Industrial activity': pm25 * 0.35 + (no2 < 30 ? 20 : 0),
+    'Industrial activity': pm25 * 0.35 + (no2 < 30 ? 20 : 0) + so2Excess * SO2_WEIGHT,
     'Seasonal background': 100 - clamp(pm25, 0, 100),
   };
 
