@@ -37,7 +37,12 @@ function readField(zone, field) {
   if (field.from === 'root') return zone[field.key];
   if (field.from === 'pollutants') return zone.pollutants?.[field.key];
   if (field.from === 'weather') return zone.weather?.[field.key];
-  if (field.from === 'context') return zone.context?.[field.key];
+  if (field.from === 'context') {
+    const c = zone.context || {};
+    // Show the date with month and year, e.g. "09 October 2026".
+    if (field.key === 'date' && c.date) return `${c.date.slice(8, 10)} ${c.month} ${c.year}`;
+    return c[field.key];
+  }
   return '—';
 }
 

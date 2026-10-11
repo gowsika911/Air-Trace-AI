@@ -26,6 +26,7 @@ Rules:
 - The live data below is always the latest. If earlier messages in this conversation quote different numbers or a different source for a zone, the data was updated since: use the live numbers and briefly say the values have changed.
 - If the user asks about a place that is not one of the four zones, say you only monitor these four zones and offer to share their data.
 - This app uses India's CPCB AQI categories: Good 0-50, Satisfactory 51-100, Moderate 101-200, Poor 201-300, Very Poor 301-400, Severe 401-500. Never use US EPA categories.
+- Weather (temperature, humidity, wind speed), station, and the recorded date/time are in the data. Answer from them when asked. Otherwise mention weather only when it explains the pollution (for example, low wind lets pollutants build up).
 - For general questions (health precautions, reducing pollution, what PM2.5 means), give practical advice.
 - Format every answer as: one short intro line, then 3-5 bullet points (each on its own line, starting with "- ", each one short), and optionally a last line starting with "Tip:". Use **bold** only for key labels (zone name, AQI, source). No markdown headers, no tables, no long paragraphs.
 - For a question about a specific zone, use these bullets: **AQI** (value and category), **Estimated main source**, **Key pollutants**, **What to do**.`;
@@ -275,22 +276,49 @@ function findMentionedZones(message, zones) {
   });
 }
 
+/** Weather + reading details shared by all zone text builders. */
+function weatherText(zone) {
+  const w = zone.weather || {};
+  return `temperature ${w.temperature} \u00b0C, humidity ${w.humidity}%, wind speed ${w.windSpeed} km/h`;
+}
+
+function readingText(zone) {
+  const c = zone.context || {};
+  const when = c.date ? `${c.date} ${c.time || ''}`.trim() : 'unknown time';
+  return `${when}${zone.station ? ` at station ${zone.station}` : ''}`;
+}
+
 /** One-line live summary of a zone (zone = enriched object from the API). */
 function zoneSummary(zone) {
   const p = zone.prediction || {};
   const c = zone.pollutants || {};
-  return `${zone.name}: AQI ${p.aqi} (${p.aqiStatus}); estimated main pollution source: ${p.source} (${p.confidence}% confidence); PM2.5 ${c.pm25}, PM10 ${c.pm10}, NO2 ${c.no2}, SO2 ${c.so2}, CO ${c.co}; suggested action: ${p.action}`;
+  return `${zone.name}: AQI ${p.aqi} (${p.aqiStatus}); estimated main pollution source: ${p.source} (${p.confidence}% confidence); PM2.5 ${c.pm25}, PM10 ${c.pm10}, NO2 ${c.no2}, SO2 ${c.so2}, CO ${c.co}; weather: ${weatherText(zone)}; recorded: ${readingText(zone)}; suggested action: ${p.action}`;
 }
 
 function zoneReply(zone) {
   const p = zone.prediction || {};
   const c = zone.pollutants || {};
+  const w = zone.weather || {};
   return [
     `**${zone.name}** right now:`,
     `- **AQI:** ${p.aqi} (${p.aqiStatus})`,
     `- **Estimated main source:** ${p.source} (${p.confidence}% confidence)`,
-    `- **Key pollutants:** PM2.5 ${c.pm25}, PM10 ${c.pm10}, NO2 ${c.no2} \u00b5g/m\u00b3`,
+    `- **Key pollutants:** PM2.5 ${c.pm25}, PM10 ${c.pm10}, NO2 ${c.no2}, SO2 ${c.so2} \u00b5g/m\u00b3, CO ${c.co} mg/m\u00b3`,
+    `- **Weather:** ${w.temperature} \u00b0C, humidity ${w.humidity}%, wind ${w.windSpeed} km/h`,
     `- **What to do:** ${p.action}`,
+    `Note: recorded ${readingText(zone)}.`,
+  ].join('\n');
+}
+
+/** Answer for "temperature / humidity / wind in <zone>" questions. */
+function weatherReply(zone) {
+  const w = zone.weather || {};
+  return [
+    `**${zone.name}** weather:`,
+    `- **Temperature:** ${w.temperature} \u00b0C`,
+    `- **Humidity:** ${w.humidity}%`,
+    `- **Wind speed:** ${w.windSpeed} km/h`,
+    `Note: recorded ${readingText(zone)}.${Number(w.windSpeed) < 5 ? ' Wind is low, so pollutants disperse slowly.' : ''}`,
   ].join('\n');
 }
 
@@ -306,7 +334,8 @@ function getRuleBasedReply(message, zones = []) {
   // If the user names a monitored zone, answer from live zone data.
   const mentioned = findMentionedZones(message, zones);
   if (mentioned.length > 0) {
-    return mentioned.map(zoneReply).join('\n\n');
+    const asksWeather = /\b(weather|temperature|temp|humidity|humid|wind|windy)\b/.test(text);
+    return mentioned.map(asksWeather ? weatherReply : zoneReply).join('\n\n');
   }
 
   for (const rule of RULES) {
@@ -327,6 +356,8 @@ function zoneFacts(zone) {
     `- AQI: ${p.aqi} (${p.aqiStatus})`,
     `- Estimated main pollution source: ${p.source} (${p.confidence}% confidence)`,
     `- PM2.5: ${c.pm25}, PM10: ${c.pm10}, NO2: ${c.no2}, SO2: ${c.so2}, CO: ${c.co}`,
+    `- Weather: ${weatherText(zone)}`,
+    `- Recorded: ${readingText(zone)}`,
     `- Suggested action: ${p.action}`,
   ].join('\n');
 }

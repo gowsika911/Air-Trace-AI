@@ -10,6 +10,9 @@ const zoneSchema = new mongoose.Schema({
   color: { type: String, required: true },
   station: { type: String, required: true },
   location: { type: String, required: true },
+  // When the reading was taken (set by the admin). Optional: if missing, live time is shown.
+  date: { type: String }, // YYYY-MM-DD
+  time: { type: String }, // HH:MM (24-hour)
   pollutants: {
     pm25: { type: Number, required: true },
     pm10: { type: Number, required: true },

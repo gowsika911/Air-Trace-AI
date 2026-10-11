@@ -53,7 +53,7 @@ async function updateZoneFields(id, fields) {
   const zone = await Zone.findOne({ id });
   if (!zone) return null;
 
-  const { pm25, pm10, no2, so2, co, temperature, humidity, windSpeed, station, location } = fields;
+  const { pm25, pm10, no2, so2, co, temperature, humidity, windSpeed, station, location, date, time } = fields;
 
   if (pm25 !== undefined) zone.pollutants.pm25 = pm25;
   if (pm10 !== undefined) zone.pollutants.pm10 = pm10;
@@ -65,6 +65,8 @@ async function updateZoneFields(id, fields) {
   if (windSpeed !== undefined) zone.weather.windSpeed = windSpeed;
   if (station !== undefined) zone.station = station;
   if (location !== undefined) zone.location = location;
+  if (date !== undefined) zone.date = date;
+  if (time !== undefined) zone.time = time;
 
   await zone.save();
   return zone;

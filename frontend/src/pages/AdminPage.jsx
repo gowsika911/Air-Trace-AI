@@ -9,13 +9,58 @@ import {
   fetchSentMessages,
 } from '../api.js';
 
+// The 12 data fields, in 3 groups. key = name used by the API.
 const FIELD_GROUPS = [
-  { title: 'Air quality', fields: ['pm25', 'pm10', 'no2', 'so2', 'co'] },
-  { title: 'Weather', fields: ['temperature', 'humidity', 'windSpeed'] },
+  {
+    title: 'Context',
+    fields: [
+      { key: 'station', label: 'Station', type: 'text' },
+      { key: 'location', label: 'Location', type: 'text' },
+      { key: 'date', label: 'Date', type: 'date' },
+      { key: 'time', label: 'Time', type: 'time' },
+    ],
+  },
+  {
+    title: 'Air quality',
+    fields: [
+      { key: 'pm25', label: 'PM2.5 (µg/m³)', type: 'number' },
+      { key: 'pm10', label: 'PM10 (µg/m³)', type: 'number' },
+      { key: 'no2', label: 'NO2 (µg/m³)', type: 'number' },
+      { key: 'so2', label: 'SO2 (µg/m³)', type: 'number' },
+      { key: 'co', label: 'CO (mg/m³)', type: 'number' },
+    ],
+  },
+  {
+    title: 'Weather',
+    fields: [
+      { key: 'temperature', label: 'Temperature (°C)', type: 'number' },
+      { key: 'humidity', label: 'Humidity (%)', type: 'number' },
+      { key: 'windSpeed', label: 'Wind speed (km/h)', type: 'number' },
+    ],
+  },
 ];
+
+const ALL_KEYS = FIELD_GROUPS.flatMap((g) => g.fields.map((f) => f.key)); // 12 keys
+
+function pad(n) {
+  return String(n).padStart(2, '0');
+}
+
+/** Current local date (YYYY-MM-DD) and time (HH:MM), for the "Set to now" button. */
+function nowParts() {
+  const d = new Date();
+  return {
+    date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
+    time: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
+  };
+}
 
 function zoneToForm(zone) {
   return {
+    station: zone.station,
+    location: zone.location,
+    date: zone.context?.date ?? nowParts().date,
+    time: zone.context?.time ?? nowParts().time,
     pm25: zone.pollutants.pm25,
     pm10: zone.pollutants.pm10,
     no2: zone.pollutants.no2,
@@ -24,41 +69,59 @@ function zoneToForm(zone) {
     temperature: zone.weather.temperature,
     humidity: zone.weather.humidity,
     windSpeed: zone.weather.windSpeed,
-    station: zone.station,
-    location: zone.location,
   };
 }
 
 /**
- * Single reusable 12-field form. Admin picks a city from the dropdown,
- * the form fills with that city's current values, edits, clicks Save,
- * then picks the next city and repeats — one form, not one per zone.
+ * One reusable form with all 12 fields. Admin picks a city, edits, saves,
+ * then picks the next city. After saving, the form shows what the server
+ * stored and the result panel shows the recalculated AQI and source.
  */
 function ZoneDataEditor({ zones, token, onSaved }) {
   const [selectedId, setSelectedId] = useState(zones[0]?.id || '');
   const [form, setForm] = useState(zones[0] ? zoneToForm(zones[0]) : {});
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState(null);
 
   const selectedZone = zones.find((z) => z.id === selectedId);
+  const prediction = selectedZone?.prediction;
 
   const handleCityChange = (id) => {
     setSelectedId(id);
     const zone = zones.find((z) => z.id === id);
     if (zone) setForm(zoneToForm(zone));
     setSaved(false);
+    setError(null);
   };
 
-  const update = (key, value) => setForm((f) => ({ ...f, [key]: value }));
+  const update = (key, value) => {
+    setForm((f) => ({ ...f, [key]: value }));
+    setSaved(false);
+  };
+
+  const setToNow = () => {
+    const { date, time } = nowParts();
+    setForm((f) => ({ ...f, date, time }));
+    setSaved(false);
+  };
 
   const handleSave = async () => {
+    setError(null);
+    const missing = ALL_KEYS.filter((k) => String(form[k] ?? '').trim() === '');
+    if (missing.length > 0) {
+      setError('Please fill all 12 fields before saving.');
+      return;
+    }
+
     setSaving(true);
-    setSaved(false);
     try {
       const updated = await updateZoneAdmin(token, selectedId, form);
       onSaved(updated);
+      setForm(zoneToForm(updated)); // show exactly what the server stored
       setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
+    } catch (err) {
+      setError(err.message || 'Could not save. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -67,12 +130,11 @@ function ZoneDataEditor({ zones, token, onSaved }) {
   return (
     <div className="card panel" style={{ minHeight: 'auto' }}>
       <div className="cardhead">
-        <div className="cardtitle">Edit zone data</div>
-        <select
-          className="select"
-          value={selectedId}
-          onChange={(e) => handleCityChange(e.target.value)}
-        >
+        <div>
+          <div className="cardtitle">Edit zone data</div>
+          <div className="sub">12 data fields per station</div>
+        </div>
+        <select className="select" value={selectedId} onChange={(e) => handleCityChange(e.target.value)}>
           {zones.map((z) => (
             <option key={z.id} value={z.id}>{z.name}</option>
           ))}
@@ -81,29 +143,33 @@ function ZoneDataEditor({ zones, token, onSaved }) {
 
       {selectedZone && (
         <>
-          <div className="inputs" style={{ marginTop: 14 }}>
-            <div className="input">
-              <label>Station</label>
-              <input value={form.station} onChange={(e) => update('station', e.target.value)} />
-            </div>
-            <div className="input">
-              <label>Location</label>
-              <input value={form.location} onChange={(e) => update('location', e.target.value)} />
-            </div>
-          </div>
-
           {FIELD_GROUPS.map((group) => (
             <div key={group.title}>
-              <p className="sub" style={{ marginTop: 14, marginBottom: 4 }}>{group.title}</p>
+              <p className="sub" style={{ marginTop: 14, marginBottom: 4 }}>
+                {group.title}
+                {group.title === 'Context' && (
+                  <button
+                    type="button"
+                    onClick={setToNow}
+                    style={{
+                      marginLeft: 10, background: 'none', border: '1px solid var(--line)', color: 'var(--teal)',
+                      borderRadius: 6, padding: '2px 8px', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit',
+                    }}
+                  >
+                    Set date &amp; time to now
+                  </button>
+                )}
+              </p>
               <div className="inputs">
                 {group.fields.map((f) => (
-                  <div className="input" key={f}>
-                    <label>{f}</label>
+                  <div className="input" key={f.key}>
+                    <label>{f.label}</label>
                     <input
-                      type="number"
-                      step="0.1"
-                      value={form[f]}
-                      onChange={(e) => update(f, e.target.value)}
+                      data-field={f.key}
+                      type={f.type}
+                      step={f.type === 'number' ? '0.1' : undefined}
+                      value={form[f.key] ?? ''}
+                      onChange={(e) => update(f.key, e.target.value)}
                     />
                   </div>
                 ))}
@@ -111,9 +177,26 @@ function ZoneDataEditor({ zones, token, onSaved }) {
             </div>
           ))}
 
+          {error && <p style={{ color: 'var(--red)', fontSize: 12, marginTop: 10 }}>{error}</p>}
+
           <button className="predict" style={{ marginTop: 14 }} onClick={handleSave} disabled={saving}>
             {saving ? 'Saving…' : saved ? `Saved — ${selectedZone.name} ✓` : `Save changes for ${selectedZone.name}`}
           </button>
+
+          {prediction && (
+            <div className="cause" style={{ marginTop: 14 }}>
+              <div className="tag">Current result · {selectedZone.name}</div>
+              <p>
+                <b style={{ color: 'var(--ink)' }}>AQI {prediction.aqi}</b> ({prediction.aqiStatus}) ·{' '}
+                {prediction.source} · {prediction.confidence}% confidence
+              </p>
+              <p style={{ marginTop: 4 }}>Suggested action: {prediction.action}</p>
+              <p style={{ marginTop: 4, fontSize: 11 }}>
+                Recorded {selectedZone.context?.date} {selectedZone.context?.time} · updates after every save
+              </p>
+            </div>
+          )}
+
           <p className="sub" style={{ marginTop: 8, fontSize: 11 }}>
             Pick another city from the dropdown above to edit it next.
           </p>

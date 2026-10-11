@@ -13,6 +13,7 @@ const { signToken, comparePassword } = require('./utils/auth');
 const { authenticate, requireAdmin } = require('./middleware/auth');
 const Conversation = require('./models/Conversation');
 const createChatRouter = require('./routes/chat');
+const { validateZoneUpdate, buildZoneContext } = require('./utils/zoneHelpers');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -27,10 +28,9 @@ const allowedOrigins = process.env.FRONTEND_URL
 app.use(cors({ origin: allowedOrigins }));
 app.use(express.json());
 
-/** Adds live date/time context + computed prediction to a zone record. */
+/** Adds the reading date/time context + computed prediction to a zone record. */
 function enrichZone(zoneDoc) {
   const zone = zoneDoc.toObject ? zoneDoc.toObject() : zoneDoc;
-  const now = new Date();
   return {
     id: zone.id,
     name: zone.name,
@@ -41,14 +41,7 @@ function enrichZone(zoneDoc) {
     location: zone.location,
     pollutants: zone.pollutants,
     weather: zone.weather,
-    context: {
-      station: zone.station,
-      location: zone.location,
-      date: now.toISOString().slice(0, 10), // YYYY-MM-DD
-      time: now.toTimeString().slice(0, 8), // HH:MM:SS
-      month: now.toLocaleString('en-US', { month: 'long' }),
-      year: now.getFullYear(),
-    },
+    context: buildZoneContext(zone),
     prediction: classifySource(zone.pollutants),
   };
 }
@@ -186,29 +179,8 @@ app.get('/api/auth/me', authenticate, async (req, res) => {
 
 app.put('/api/admin/zones/:id', authenticate, requireAdmin, async (req, res) => {
   try {
-    const { pm25, pm10, no2, so2, co, temperature, humidity, windSpeed, station, location } = req.body;
-
-    const numericFields = { pm25, pm10, no2, so2, co, temperature, humidity, windSpeed };
-    for (const [key, value] of Object.entries(numericFields)) {
-      if (value !== undefined) {
-        const num = Number(value);
-        if (Number.isNaN(num) || num < 0) {
-          return res.status(400).json({ error: `${key} must be a non-negative number.` });
-        }
-      }
-    }
-
-    const fields = {};
-    if (pm25 !== undefined) fields.pm25 = Number(pm25);
-    if (pm10 !== undefined) fields.pm10 = Number(pm10);
-    if (no2 !== undefined) fields.no2 = Number(no2);
-    if (so2 !== undefined) fields.so2 = Number(so2);
-    if (co !== undefined) fields.co = Number(co);
-    if (temperature !== undefined) fields.temperature = Number(temperature);
-    if (humidity !== undefined) fields.humidity = Number(humidity);
-    if (windSpeed !== undefined) fields.windSpeed = Number(windSpeed);
-    if (station !== undefined) fields.station = String(station);
-    if (location !== undefined) fields.location = String(location);
+    const { error, fields } = validateZoneUpdate(req.body);
+    if (error) return res.status(400).json({ error });
 
     const zone = await updateZoneFields(req.params.id, fields);
     if (!zone) return res.status(404).json({ error: 'Zone not found' });
