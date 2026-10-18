@@ -1,0 +1,129 @@
+{
+  "note": "All figures below are on SIMULATED data. They do not describe accuracy on real-world readings.",
+  "model": "Random Forest",
+  "library": "ml-random-forest",
+  "trainedOn": "SIMULATED data (demonstration of the ML pipeline, not real labelled readings)",
+  "classes": [
+    "Traffic emissions",
+    "Industrial activity",
+    "Construction dust",
+    "Seasonal background"
+  ],
+  "features": [
+    "pm25",
+    "pm10",
+    "no2",
+    "so2",
+    "co",
+    "pm10_pm25_ratio"
+  ],
+  "trainRows": 3200,
+  "testRows": 800,
+  "seed": 42,
+  "options": {
+    "seed": 42,
+    "nEstimators": 100,
+    "maxFeatures": 0.7,
+    "replacement": true,
+    "useSampleBagging": true,
+    "treeOptions": {
+      "maxDepth": 10,
+      "minNumSamples": 5
+    }
+  },
+  "duplicateRows": 0,
+  "trainAccuracy": 0.985,
+  "testAccuracy": 0.963,
+  "perClass": [
+    {
+      "class": "Traffic emissions",
+      "precision": 0.947,
+      "recall": 0.975,
+      "f1": 0.961
+    },
+    {
+      "class": "Industrial activity",
+      "precision": 0.968,
+      "recall": 0.92,
+      "f1": 0.944
+    },
+    {
+      "class": "Construction dust",
+      "precision": 0.975,
+      "recall": 0.965,
+      "f1": 0.97
+    },
+    {
+      "class": "Seasonal background",
+      "precision": 0.961,
+      "recall": 0.99,
+      "f1": 0.975
+    }
+  ],
+  "confusionMatrix": {
+    "rowsAreTrueClass": [
+      "Traffic emissions",
+      "Industrial activity",
+      "Construction dust",
+      "Seasonal background"
+    ],
+    "columnsArePredictedClass": [
+      "Traffic emissions",
+      "Industrial activity",
+      "Construction dust",
+      "Seasonal background"
+    ],
+    "matrix": [
+      [
+        195,
+        5,
+        0,
+        0
+      ],
+      [
+        11,
+        184,
+        3,
+        2
+      ],
+      [
+        0,
+        1,
+        193,
+        6
+      ],
+      [
+        0,
+        0,
+        2,
+        198
+      ]
+    ]
+  },
+  "featureImportance": [
+    {
+      "feature": "so2",
+      "accuracyDrop": 0.155
+    },
+    {
+      "feature": "pm10_pm25_ratio",
+      "accuracyDrop": 0.144
+    },
+    {
+      "feature": "co",
+      "accuracyDrop": 0.082
+    },
+    {
+      "feature": "no2",
+      "accuracyDrop": 0.071
+    },
+    {
+      "feature": "pm10",
+      "accuracyDrop": 0.028
+    },
+    {
+      "feature": "pm25",
+      "accuracyDrop": 0.004
+    }
+  ]
+}

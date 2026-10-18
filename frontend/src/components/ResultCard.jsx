@@ -31,6 +31,11 @@ export default function ResultCard({ zoneLabel, prediction, loading }) {
         <div className="score">{confidence}% CONFIDENCE · DOMINANT SOURCE</div>
         <h2>{source}</h2>
         <p>{detail}</p>
+        <p style={{ marginTop: 8, fontSize: 11, opacity: 0.85 }}>
+          {prediction.method === 'random-forest'
+            ? 'Model: Random Forest · confidence = share of trees that agree · trained on simulated data'
+            : 'Method: rule-based scoring'}
+        </p>
       </div>
 
       {breakdown.map((item) => (

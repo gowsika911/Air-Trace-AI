@@ -3,11 +3,13 @@ export default function InfoBanner() {
     <div className="infobanner">
       <div className="icon">i</div>
       <p>
-        <b>How it works:</b> source predictions currently use a rule-based scoring engine on
-        PM2.5, PM10, NO₂ and CO. It is designed as a drop-in placeholder for the trained{' '}
-        <b>Random Forest</b> model described in our base research (96.9% accuracy, 27
-        pollutants) — the next step is training that model on real emission data and swapping
-        it into the backend without changing this UI.
+        <b>How it works:</b> the pollution source is predicted by a <b>Random Forest</b> model
+        (100 decision trees) from PM2.5, PM10, NO₂, SO₂, CO and the PM10/PM2.5 ratio. The model
+        is trained on <b>simulated data</b> to demonstrate the ML pipeline, so its accuracy
+        figures do not describe real-world performance. Our base research reports 96.9% on real
+        industry-emission data in Korea, which is a different task and dataset. Next step: train
+        on real, labelled source data. If the model is unavailable, the app falls back to
+        rule-based scoring.
       </p>
     </div>
   );

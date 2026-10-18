@@ -16,6 +16,8 @@
  * does not need to change.
  */
 
+const sourceModel = require('./ml/sourceModel');
+
 const SOURCE_PROFILES = {
   'Traffic emissions': {
     detail: 'Rush-hour NO2 and CO pattern detected at this location.',
@@ -89,12 +91,17 @@ function classifySource({ pm25, pm10, no2, co, so2 = 0 }) {
   const ratio = pm25 > 0 ? pm10 / pm25 : 0;
   const so2Excess = Math.max(0, so2 - SO2_BACKGROUND);
 
-  const scores = {
+  const ruleScores = {
     'Traffic emissions': no2 * 0.6 + co * 25,
     'Construction dust': clamp(ratio - 1, 0, 3) * 60,
     'Industrial activity': pm25 * 0.35 + (no2 < 30 ? 20 : 0) + so2Excess * SO2_WEIGHT,
     'Seasonal background': 100 - clamp(pm25, 0, 100),
   };
+
+  // Prefer the trained Random Forest; fall back to the rule-based scores if it is unavailable.
+  const modelProbabilities = sourceModel.predictProbabilities({ pm25, pm10, no2, so2, co });
+  const scores = modelProbabilities || ruleScores;
+  const method = modelProbabilities ? 'random-forest' : 'rules';
 
   const entries = Object.entries(scores);
   const total = entries.reduce((sum, [, value]) => sum + Math.max(value, 0), 0) || 1;
@@ -121,6 +128,7 @@ function classifySource({ pm25, pm10, no2, co, so2 = 0 }) {
     aqi,
     aqiStatus: status,
     trend: buildTrend(pm25),
+    method,
   };
 }
 
