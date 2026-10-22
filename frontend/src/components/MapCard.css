@@ -1,0 +1,49 @@
+/* Leaflet map inside the dashboard card (dark theme to match the app). */
+/* z-index: 0 keeps Leaflet's high internal z-index values inside the map, so it can never cover
+   the toast notifications or anything else on the page. */
+.map-host { position: absolute; inset: 83px 0 0; z-index: 0; }
+.map-leaflet { position: absolute; inset: 0; background: #0b272d; font: inherit; }
+
+/* Dark map: invert the light OpenStreetMap tiles. Only the tile pane is filtered. */
+.map-leaflet .leaflet-tile-pane {
+  filter: invert(100%) hue-rotate(180deg) brightness(92%) contrast(88%) saturate(65%);
+}
+
+.map-leaflet .leaflet-bar { border: 1px solid var(--line); box-shadow: none; }
+.map-leaflet .leaflet-bar a { background: #0d252b; color: var(--ink); border-bottom-color: var(--line); }
+.map-leaflet .leaflet-bar a:hover { background: #123238; }
+.map-leaflet .leaflet-control-attribution { background: rgba(7, 24, 28, 0.85); color: var(--muted); font-size: 10px; }
+.map-leaflet .leaflet-control-attribution a { color: var(--teal); }
+
+/* Pins */
+.airpin-wrap { background: none; border: 0; }
+.airpin { position: relative; width: 40px; height: 40px; cursor: pointer; }
+.airpin-dot {
+  position: absolute; inset: 4px; display: grid; place-items: center;
+  border-radius: 50%; background: var(--pin); color: #06242b;
+  font-size: 12px; font-weight: 800; border: 3px solid #06242b;
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.14), 0 0 16px var(--pin);
+  transition: transform 0.15s;
+}
+.airpin:hover .airpin-dot { transform: scale(1.12); }
+.airpin-active .airpin-dot { transform: scale(1.25); border-color: #fff; }
+.airpin-name {
+  position: absolute; left: 46px; top: 9px; white-space: nowrap; pointer-events: none;
+  font-size: 12px; font-weight: 700; color: #e9f8f9; text-shadow: 0 1px 4px #000, 0 0 6px #000;
+}
+.leaflet-marker-icon:focus-visible .airpin-dot { outline: 2px solid var(--teal); outline-offset: 3px; }
+
+/* Legend (above the map, left of the OpenStreetMap credit) */
+.map-legend {
+  position: absolute; left: 10px; bottom: 10px; z-index: 800;
+  display: flex; flex-wrap: wrap; gap: 4px 12px; max-width: calc(100% - 200px);
+  background: #092126dc; border: 1px solid var(--line); border-radius: 10px;
+  padding: 7px 10px; color: var(--muted); font-size: 11px;
+}
+.map-legend i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; background: var(--c); }
+
+/* Phones: legend spans the width, above the OpenStreetMap credit */
+@media (max-width: 560px) {
+  .map-legend { max-width: calc(100% - 20px); bottom: 30px; }
+  .airpin-name { font-size: 11px; }
+}
