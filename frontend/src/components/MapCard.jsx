@@ -53,11 +53,34 @@ function buildPin(zone, isActive) {
   return el;
 }
 
+/**
+ * A pin's name is drawn to its right. If another pin is in the way (close on the right,
+ * at about the same height), draw the name to the left instead. Runs after every redraw
+ * and every zoom, because pin distances on screen change with the zoom level.
+ */
+const LABEL_REACH_PX = 150;
+const LABEL_HEIGHT_PX = 30;
+
+function layoutLabels(map, items) {
+  const points = items.map((item) => map.latLngToContainerPoint(item.marker.getLatLng()));
+  items.forEach((item, i) => {
+    const blocked = points.some(
+      (other, j) =>
+        j !== i &&
+        other.x - points[i].x > 0 &&
+        other.x - points[i].x < LABEL_REACH_PX &&
+        Math.abs(other.y - points[i].y) < LABEL_HEIGHT_PX
+    );
+    item.pin.classList.toggle('airpin-left', blocked);
+  });
+}
+
 export default function MapCard({ zones = [], activeZoneId, onSelectZone }) {
   const hostRef = useRef(null);
   const mapRef = useRef(null);
   const markersRef = useRef(null);
   const fittedRef = useRef(false);
+  const itemsRef = useRef([]); // [{ marker, pin }] for the pins currently drawn
   const onSelectRef = useRef(onSelectZone);
   onSelectRef.current = onSelectZone; // always the latest callback, without redrawing the map
 
@@ -74,6 +97,7 @@ export default function MapCard({ zones = [], activeZoneId, onSelectZone }) {
     // Click the map to enable wheel zoom; leaving the map turns it off again.
     map.on('click', () => map.scrollWheelZoom.enable());
     map.on('mouseout', () => map.scrollWheelZoom.disable());
+    map.on('zoomend', () => layoutLabels(map, itemsRef.current));
 
     markersRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
@@ -84,6 +108,7 @@ export default function MapCard({ zones = [], activeZoneId, onSelectZone }) {
       map.remove();
       mapRef.current = null;
       markersRef.current = null;
+      itemsRef.current = [];
       fittedRef.current = false;
     };
   }, []);
@@ -96,6 +121,7 @@ export default function MapCard({ zones = [], activeZoneId, onSelectZone }) {
 
     layer.clearLayers();
     const points = [];
+    const items = [];
 
     zones.forEach((zone) => {
       const position = coordinatesFor(zone);
@@ -104,10 +130,11 @@ export default function MapCard({ zones = [], activeZoneId, onSelectZone }) {
 
       const isActive = zone.id === activeZoneId;
       const aqi = zone.prediction?.aqi;
+      const pin = buildPin(zone, isActive);
       const marker = L.marker(position, {
         icon: L.divIcon({
           className: 'airpin-wrap',
-          html: buildPin(zone, isActive),
+          html: pin,
           iconSize: [40, 40],
           iconAnchor: [20, 20],
         }),
@@ -119,13 +146,16 @@ export default function MapCard({ zones = [], activeZoneId, onSelectZone }) {
       });
       marker.on('click', () => onSelectRef.current?.(zone));
       marker.addTo(layer);
+      items.push({ marker, pin });
     });
+    itemsRef.current = items;
 
     // Frame all zones once. Later data refreshes must not reset the user's zoom and position.
     if (points.length > 0 && !fittedRef.current) {
-      map.fitBounds(L.latLngBounds(points), { padding: [70, 70], maxZoom: 14 });
+      map.fitBounds(L.latLngBounds(points), { padding: [40, 40], maxZoom: 14 });
       fittedRef.current = true;
     }
+    layoutLabels(map, items);
   }, [zones, activeZoneId]);
 
   return (

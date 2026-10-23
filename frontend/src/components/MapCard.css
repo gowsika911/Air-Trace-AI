@@ -31,6 +31,8 @@
   position: absolute; left: 46px; top: 9px; white-space: nowrap; pointer-events: none;
   font-size: 12px; font-weight: 700; color: #e9f8f9; text-shadow: 0 1px 4px #000, 0 0 6px #000;
 }
+/* name on the left when another pin is in the way (set by layoutLabels in MapCard.jsx) */
+.airpin-left .airpin-name { left: auto; right: 46px; text-align: right; }
 .leaflet-marker-icon:focus-visible .airpin-dot { outline: 2px solid var(--teal); outline-offset: 3px; }
 
 /* Legend (above the map, left of the OpenStreetMap credit) */
