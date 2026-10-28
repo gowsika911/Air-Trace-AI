@@ -47,7 +47,6 @@ export default function LoginPage() {
           No account? <Link to="/signup" style={{ color: 'var(--teal)' }}>Sign up</Link>
         </p>
         <p className="sub" style={{ marginTop: 10, fontSize: 11 }}>
-          Demo admin: admin@airtrace.ai / Admin@123 · Demo user: user@airtrace.ai / User@123
         </p>
       </div>
     </>
