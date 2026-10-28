@@ -13,6 +13,7 @@ export default function SignupPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -23,76 +24,176 @@ export default function SignupPage() {
       await signup(name, email, password);
       navigate('/');
     } catch (err) {
-      setError(err.message);
+      setError(err.message || 'Unable to create your account. Please try again.');
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="login-page">
-      <div className="login-container">
+    <div className="auth-page">
+      <div className="auth-glow auth-glow-one" />
+      <div className="auth-glow auth-glow-two" />
+
+      <div className="auth-wrapper">
+        <Link to="/" className="auth-brand">
+          <span className="brand-icon">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path
+                d="M3 13h4l3-8 4 14 3-6h4"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </span>
+          <span>
+            <strong>AirTrace</strong>
+            <span className="brand-ai"> AI</span>
+            <small>SMARTER AIR. HEALTHIER LIFE.</small>
+          </span>
+        </Link>
+
         <Headline
-          eyebrow="Account"
-          title="Create an account"
-          subtitle="Sign up as a citizen user"
+          eyebrow="JOIN THE COMMUNITY"
+          title="Start breathing smarter."
+          subtitle="Create your account and stay informed about the air around you."
         />
 
-        <div className="card panel login-card">
+        <div className="auth-card">
+          <div className="auth-card-top">
+            <div>
+              <h2>Create account</h2>
+              <p>Get started with AirTrace AI today.</p>
+            </div>
+            <div className="auth-shield">✦</div>
+          </div>
+
           <form onSubmit={handleSubmit}>
-            <div className="input">
-              <label>Name</label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-              />
+            <div className="auth-field">
+              <label htmlFor="signup-name">Full name</label>
+              <div className="auth-input-wrap">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <circle
+                    cx="12" cy="8" r="4"
+                    stroke="currentColor" strokeWidth="1.7"
+                  />
+                  <path
+                    d="M4 21a8 8 0 0 1 16 0"
+                    stroke="currentColor" strokeWidth="1.7"
+                    strokeLinecap="round"
+                  />
+                </svg>
+                <input
+                  id="signup-name"
+                  type="text"
+                  placeholder="Enter your full name"
+                  autoComplete="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                />
+              </div>
             </div>
 
-            <div className="input">
-              <label>Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
+            <div className="auth-field">
+              <label htmlFor="signup-email">Email address</label>
+              <div className="auth-input-wrap">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <rect
+                    x="3" y="5" width="18" height="14" rx="3"
+                    stroke="currentColor" strokeWidth="1.7"
+                  />
+                  <path
+                    d="m4 7 8 6 8-6"
+                    stroke="currentColor" strokeWidth="1.7"
+                    strokeLinecap="round"
+                  />
+                </svg>
+                <input
+                  id="signup-email"
+                  type="email"
+                  placeholder="you@example.com"
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
             </div>
 
-            <div className="input">
-              <label>Password (min 6 characters)</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                minLength={6}
-                required
-              />
+            <div className="auth-field">
+              <label htmlFor="signup-password">Password</label>
+              <div className="auth-input-wrap">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <rect
+                    x="4" y="10" width="16" height="11" rx="2"
+                    stroke="currentColor" strokeWidth="1.7"
+                  />
+                  <path
+                    d="M8 10V7a4 4 0 0 1 8 0v3"
+                    stroke="currentColor" strokeWidth="1.7"
+                  />
+                </svg>
+                <input
+                  id="signup-password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="At least 6 characters"
+                  autoComplete="new-password"
+                  minLength={6}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+                <button
+                  type="button"
+                  className="password-toggle"
+                  onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? 'Hide' : 'Show'}
+                </button>
+              </div>
+              <small className="auth-hint">
+                Use at least 6 characters for your password.
+              </small>
             </div>
 
             {error && (
-              <p className="login-error">{error}</p>
+              <div className="auth-error" role="alert">
+                <span>!</span>
+                {error}
+              </div>
             )}
 
             <button
-              className="predict"
+              className="auth-submit"
               type="submit"
               disabled={submitting}
             >
-              {submitting ? 'Creating account…' : 'Sign up'}
+              {submitting ? 'Creating account...' : 'Create my account'}
+              {!submitting && <span>→</span>}
             </button>
           </form>
 
-          <p className="sub signup-text">
-            Already have an account?{' '}
-            <Link to="/login" className="signup-link">
-              Log in
-            </Link>
+          <div className="auth-divider">
+            <span />
+            <small>YOUR AIR QUALITY JOURNEY</small>
+            <span />
+          </div>
+
+          <p className="auth-switch">
+            Already have an account?
+            <Link to="/login">Sign in <span>↗</span></Link>
           </p>
+        </div>
+
+        <div className="auth-footer">
+          <span className="status-dot" />
+          Built for cleaner air and smarter decisions
         </div>
       </div>
     </div>
   );
 }
-
