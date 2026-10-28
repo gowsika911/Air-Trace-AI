@@ -194,3 +194,54 @@ body {
   .inputs { grid-template-columns: 1fr; }
   .source h2 { font-size: 21px; }
 }
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.login-container {
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+.login-card {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.login-card .input {
+  margin-bottom: 12px;
+}
+
+.login-card label {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.login-card input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.login-card .predict {
+  width: 100%;
+}
+
+.login-error {
+  color: var(--red);
+  font-size: 12px;
+  margin-bottom: 10px;
+}
+
+.signup-text {
+  margin-top: 14px;
+}
+
+.signup-link {
+  color: var(--teal);
+}
