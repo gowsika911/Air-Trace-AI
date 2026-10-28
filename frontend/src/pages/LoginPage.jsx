@@ -24,7 +24,7 @@ export default function LoginPage() {
       setSubmitting(false);
     }
   };
-
+  <center>
   return (
     <>
       <Headline eyebrow="Account" title="Log in" subtitle="Access your AirTrace AI dashboard" />
@@ -50,5 +50,7 @@ export default function LoginPage() {
         </p>
       </div>
     </>
+    
   );
+  </center>
 }
